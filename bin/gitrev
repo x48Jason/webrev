@@ -1,0 +1,259 @@
+#!/bin/ksh
+
+HTML='<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">\n'
+
+STDHEAD='<meta http-equiv="cache-control" content="no-cache"></meta>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=utf-8"></meta>
+<meta http-equiv="Pragma" content="no-cache"></meta>
+<meta http-equiv="Expires" content="-1"></meta>
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+span.chmod {
+    font-size: 0.7em;
+    color: #db7800;
+}
+a.print { font-size: x-small; }
+a:hover { background-color: #ffcc99; }
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+'
+
+#
+# input_cmd | html_quote | output_cmd
+# or
+# html_quote filename | output_cmd
+#
+# Make a piece of source code safe for display in an HTML <pre> block.
+#
+html_quote()
+{
+	$SED -e "s/&/\&amp;/g" -e "s/</\&lt;/g" -e "s/>/\&gt;/g" "$@" | expand
+}
+
+function look_for_prog
+{
+	typeset path
+	typeset ppath
+	typeset progname=$1
+
+	ppath=$PATH
+	ppath=$ppath:/usr/sfw/bin:/usr/bin:/usr/sbin
+	ppath=$ppath:/opt/onbld/bin
+	ppath=$ppath:/opt/onbld/bin/`uname -p`
+
+	PATH=$ppath prog=`whence $progname`
+	if [[ -n $prog ]]; then 
+		print $prog
+	fi
+}
+
+function generate_top_index_html
+{
+	commit_list_file=$1
+
+	INDEXFILE=$output_dir/index.html
+	exec 3<&1		       # duplicate stdout to FD3.
+	exec 1<&-		       # Close stdout.
+	exec > $INDEXFILE	       # Open stdout to index file.
+
+	WNAME=$(pwd)
+	WNAME=${WNAME##*/}
+	print "$HTML<head>$STDHEAD"
+	print "<title>$WNAME</title>"
+	print "</head>"
+	print "<body id=\"SUNWwebrev\">"
+	print "<div class=\"summary\">"
+	print "<h2>Code Review for $WNAME</h2>"
+	
+	print "<table>"
+	
+	preparer=$(
+	    $PERL -e '
+		($login, $pw, $uid, $gid, $quota, $cmt, $gcos) = getpwuid($<);
+		if ($login) {
+		    $gcos =~ s/\&/ucfirst($login)/e;
+		    printf "%s (%s)\n", $gcos, $login;
+		} else {
+		    printf "(unknown)\n";
+		}
+	   ')
+	
+	PREPDATE=$(LC_ALL=C date +%Y-%b-%d\ %R\ %z\ %Z)
+	
+	print "<tr><th>Prepared by:</th><td>$preparer on $PREPDATE</td></tr>"
+	print "<tr><th>Workspace:</th><td>${PRETTY_CWS:-$CWS}"
+	print "</td></tr>"
+	print "</table>"
+	print "</div>"
+	
+	cat $commit_list_file | while read LINE
+	do
+		hash="$(cut -d ' ' -f 1 <<< $LINE)"
+		title="$(cut -d ' ' -f 2- <<< $LINE)"
+		quoted_title="$(echo "$title" | html_quote)"
+		sub_dir_url="$hash/index.html"
+		commit_message="$($GIT show -s --format=%B $hash)"
+	
+		print "<p>"
+		print "<a href=\"$sub_dir_url\">$quoted_title</a>"
+		print "</p>"
+		print "<blockquote><pre>"
+		print "$commit_message"
+		print "</pre>"
+		print "</blockquote>"
+	done
+	
+	print
+	print
+	print "<hr></hr>"
+	print "<p style=\"font-size: small\">"
+	print "Webrev is maintained by the <a href=\"http://www.illumos.org\">"
+	print "illumos</a> project.  The latest version may be obtained"
+	print "<a href=\"http://src.illumos.org/source/xref/illumos-gate/usr/src/tools/scripts/webrev.sh\">here</a>.</p>"
+	print "</body>"
+	print "</html>"
+	
+	exec 1<&-		       # Close FD 1.
+	exec 1<&3		       # dup FD 3 to restore stdout.
+	exec 3<&-		       # close FD 3.
+}
+
+function generate_all_commits
+{
+	commit_list_file=$1
+	export UDIFFCMD="$GIT diff -U5 --no-index --no-prefix"
+
+	cat $commit_list_file | while read LINE
+	do
+		hash="$(cut -d ' ' -f 1 <<< $LINE)"
+		title="$(cut -d ' ' -f 2- <<< $LINE)"
+		echo "generate webrev for commit $hash: $title"
+		$WEBREV -o $output_dir/$hash -c $hash
+	done
+}
+
+#
+#
+# Main program starts here
+#
+#
+
+PATH=$(dirname "$(whence $0)"):$PATH
+
+[[ -z $PERL ]] && PERL=`look_for_prog perl`
+[[ -z $GIT ]] && GIT=`look_for_prog git`
+[[ -z $AWK ]] && AWK=`look_for_prog nawk`
+[[ -z $AWK ]] && AWK=`look_for_prog gawk`
+[[ -z $AWK ]] && AWK=`look_for_prog awk`
+[[ -z $SED ]] && SED=`look_for_prog sed`
+[[ -z $WEBREV ]] && WEBREV=`look_for_prog webrev`
+
+while getopts "o:" opt
+do
+	case $opt in
+	o)	output_dir=$OPTARG;;
+	esac
+done
+
+[[ -z $output_dir ]] && output_dir="$(pwd)/webrev"
+
+commit_from=$1
+commit_to=$2
+[[ -z $commit_to ]] && commit_to="HEAD"
+
+mkdir -p $output_dir
+COMMIT_LIST=$output_dir/commit.list
+$GIT log --pretty=tformat:"%H %s" ${commit_from}..${commit_to} > $COMMIT_LIST
+
+codemgr_ws=$($GIT rev-parse --git-dir 2>/dev/null)
+if [[ "$codemgr_ws" == ".git" ]]; then 
+	codemgr_ws="$(pwd)/${codemgr_ws}"
+fi
+codemgr_ws=$(dirname $codemgr_ws) # Lose the '/.git'
+CWS="$codemgr_ws"
+cnode_from=$($GIT --git-dir=${codemgr_ws}/.git rev-parse --short=12 ${commit_from} 2>/dev/null)
+cnode_to=$($GIT --git-dir=${codemgr_ws}/.git rev-parse --short=12 ${commit_to} 2>/dev/null)
+
+PRETTY_CWS="${CWS} (${cnode_from} .. ${cnode_to})"
+
+#
+# walk through the commits to generate top level index.html
+#
+echo -n "generate top level index.html..."
+generate_top_index_html $COMMIT_LIST
+echo "Done."
+
+#
+# walk through the commits again to generate webrev for each commit
+#
+echo "generate webrev for each commit"
+generate_all_commits $COMMIT_LIST
+
+echo "Done."
