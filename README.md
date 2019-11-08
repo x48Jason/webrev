@@ -67,12 +67,14 @@ If you want to review code for a range of commits, it is better to generate a to
 level index.html which has all the links to each commits. gitrev is for this.
 
 Usage:
+
     $ gitrev <commit_from> [<commit_to>]
 
-    if <commit_to> is not specified, HEAD will be used.
+If \<commit\_to> is not specified, HEAD will be used.
 
 Internally gitrev uses webrev to generate html files for each commit.
 
 Example:
+
     $ gitrev 191bbda4a716cc6e7c0416ececdb8c8142f143aa ef8f161d4880ef2506ae77839dc45dcdc1be5f23
 
