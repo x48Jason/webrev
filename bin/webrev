@@ -2152,6 +2152,8 @@ Options:
 	-c <revision>: generate webrev for single revision (git only)
 	-C <filename>: Use <filename> for the information tracking configuration.
 	-D: delete remote webrev
+	-g: run in gitrev mode, no commit message for each file,
+	    gitrev will generate that at top level index.html.
 	-h <revision>: specify "head" revision for comparison (git only)
 	-i <filename>: Include <filename> in the index.html file.
 	-I <filename>: Use <filename> for the information tracking registry.
@@ -2247,6 +2249,7 @@ Cflag=
 Dflag=
 flist_mode=
 flist_file=
+gflag=
 hflag=
 iflag=
 Iflag=
@@ -2266,7 +2269,7 @@ remote_target=
 # NOTE: when adding/removing options it is necessary to sync the list
 #	with usr/src/tools/onbld/hgext/cdm.py
 #
-while getopts "c:C:Dh:i:I:lnNo:Op:t:Uw" opt
+while getopts "c:C:Dgh:i:I:lnNo:Op:t:Uw" opt
 do
 	case $opt in
 	c)	cflag=1
@@ -2278,6 +2281,7 @@ do
 
 	D)	Dflag=1;;
 
+	g)	gflag=1;;
 	h)	hflag=1
 		codemgr_head=$OPTARG;;
 
@@ -3600,10 +3604,14 @@ do
 
 	print "</p>"
 
-	# Insert delta comments
-	print "<blockquote><pre>"
-	getcomments html $P $PP
-	print "</pre>"
+	if [[ -z $gflag ]]; then
+		# Insert delta comments
+		print "<blockquote><pre>"
+		getcomments html $P $PP
+		print "</pre>"
+	else
+		print "<blockquote>"
+	fi
 
 	# Add additional comments comment
 	print "<!-- Add comments to explain changes in $P here -->"

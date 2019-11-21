@@ -201,7 +201,7 @@ function generate_all_commits
 		hash="$(cut -d ' ' -f 1 <<< $LINE)"
 		title="$(cut -d ' ' -f 2- <<< $LINE)"
 		echo "generate webrev for commit $hash: $title"
-		$WEBREV -o $output_dir/$hash -c $hash
+		$WEBREV -g -o $output_dir/$hash -c $hash
 	done
 }
 
