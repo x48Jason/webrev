@@ -236,7 +236,8 @@ commit_to=$2
 
 mkdir -p $output_dir
 COMMIT_LIST=$output_dir/commit.list
-$GIT log --pretty=tformat:"%H %s" ${commit_from}..${commit_to} > $COMMIT_LIST
+$GIT log --pretty=tformat:"%H %s" ${commit_from}..${commit_to} > $COMMIT_LIST.r
+perl -e 'print reverse <>' $COMMIT_LIST.r > $COMMIT_LIST
 
 codemgr_ws=$($GIT rev-parse --git-dir 2>/dev/null)
 if [[ "$codemgr_ws" == ".git" ]]; then 
