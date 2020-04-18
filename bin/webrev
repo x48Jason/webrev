@@ -1548,6 +1548,9 @@ getcomments()
 	if [[ -n $Nflag ]]; then
 		return
 	fi
+	if [[ -n $gflag ]]; then
+		return
+	fi
 	#
 	# Mercurial support uses a file list in wx format, so this
 	# will be used there, too
@@ -3373,74 +3376,99 @@ print "$HTML<head>$STDHEAD"
 print "<title>$WNAME</title>"
 print "</head>"
 print "<body id=\"SUNWwebrev\">"
-print "<div class=\"summary\">"
-print "<h2>Code Review for $WNAME</h2>"
 
-print "<table>"
+if [[ -z $gflag ]]; then
+	print "<div class=\"summary\">"
+	print "<h2>Code Review for $WNAME</h2>"
 
-#
-# Get the preparer's name:
-#
-# If the SCM detected is Mercurial, and the configuration property
-# ui.username is available, use that, but be careful to properly escape
-# angle brackets (HTML syntax characters) in the email address.
-#
-# Otherwise, use the current userid in the form "John Doe (jdoe)", but
-# to maintain compatibility with passwd(4), we must support '&' substitutions.
-#
-preparer=
-if [[ "$SCM_MODE" == mercurial ]]; then
-	preparer=`hg showconfig ui.username 2>/dev/null`
-	if [[ -n "$preparer" ]]; then
-		preparer="$(echo "$preparer" | html_quote)"
+	print "<table>"
+
+	#
+	# Get the preparer's name:
+	#
+	# If the SCM detected is Mercurial, and the configuration property
+	# ui.username is available, use that, but be careful to properly escape
+	# angle brackets (HTML syntax characters) in the email address.
+	#
+	# Otherwise, use the current userid in the form "John Doe (jdoe)", but
+	# to maintain compatibility with passwd(4), we must support '&' substitutions.
+	#
+	preparer=
+	if [[ "$SCM_MODE" == mercurial ]]; then
+		preparer=`hg showconfig ui.username 2>/dev/null`
+		if [[ -n "$preparer" ]]; then
+			preparer="$(echo "$preparer" | html_quote)"
+		fi
 	fi
-fi
-if [[ -z "$preparer" ]]; then
-	preparer=$(
-	    $PERL -e '
-	        ($login, $pw, $uid, $gid, $quota, $cmt, $gcos) = getpwuid($<);
-	        if ($login) {
-	            $gcos =~ s/\&/ucfirst($login)/e;
-	            printf "%s (%s)\n", $gcos, $login;
-	        } else {
-	            printf "(unknown)\n";
-	        }
-	')
+	if [[ -z "$preparer" ]]; then
+		preparer=$(
+		    $PERL -e '
+		        ($login, $pw, $uid, $gid, $quota, $cmt, $gcos) = getpwuid($<);
+		        if ($login) {
+		            $gcos =~ s/\&/ucfirst($login)/e;
+		            printf "%s (%s)\n", $gcos, $login;
+		        } else {
+		            printf "(unknown)\n";
+		        }
+		')
+	fi
+
+	PREPDATE=$(LC_ALL=C date +%Y-%b-%d\ %R\ %z\ %Z)
+	print "<tr><th>Prepared by:</th><td>$preparer on $PREPDATE</td></tr>"
+	print "<tr><th>Workspace:</th><td>${PRETTY_CWS:-$CWS}"
+	print "</td></tr>"
+	print "<tr><th>Compare against:</th><td>"
+	if [[ -n $parent_webrev ]]; then
+		print "webrev at $parent_webrev"
+	else
+		print "${PRETTY_PWS:-$PWS}"
+	fi
+	print "</td></tr>"
+	print "<tr><th>Summary of changes:</th><td>"
+	printCI $TOTL $TINS $TDEL $TMOD $TUNC
+	print "</td></tr>"
+
+	if [[ -f $WDIR/$WNAME.patch ]]; then
+		wpatch_url="$(print $WNAME.patch | url_encode)"
+		print "<tr><th>Patch of changes:</th><td>"
+		print "<a href=\"$wpatch_url\">$WNAME.patch</a></td></tr>"
+	fi
+	if [[ -f $WDIR/$WNAME.pdf ]]; then
+		wpdf_url="$(print $WNAME.pdf | url_encode)"
+		print "<tr><th>Printable review:</th><td>"
+		print "<a href=\"$wpdf_url\">$WNAME.pdf</a></td></tr>"
+	fi
+
+	if [[ -n "$iflag" ]]; then
+		print "<tr><th>Author comments:</th><td><div>"
+		cat /tmp/$$.include
+		print "</div></td></tr>"
+	fi
+	print "</table>"
+	print "</div>"
 fi
 
-PREPDATE=$(LC_ALL=C date +%Y-%b-%d\ %R\ %z\ %Z)
-print "<tr><th>Prepared by:</th><td>$preparer on $PREPDATE</td></tr>"
-print "<tr><th>Workspace:</th><td>${PRETTY_CWS:-$CWS}"
-print "</td></tr>"
-print "<tr><th>Compare against:</th><td>"
-if [[ -n $parent_webrev ]]; then
-	print "webrev at $parent_webrev"
-else
-	print "${PRETTY_PWS:-$PWS}"
-fi
-print "</td></tr>"
-print "<tr><th>Summary of changes:</th><td>"
-printCI $TOTL $TINS $TDEL $TMOD $TUNC
-print "</td></tr>"
+if [[ -n $gflag ]]; then
+	hash=$codemgr_head
+	quoted_title="$(echo "$title" | html_quote)"
+	commit_message="$($GIT show -s --format=%B $hash)"
+	author_name="$($GIT show -s --format=%an $hash)"
+	author_email="$($GIT show -s --format=%ae $hash)"
+	quoted_author="$(echo "$author_name" "<$author_email>" | html_quote)"
+	author_date="$($GIT show -s --format=%ad $hash)"
 
-if [[ -f $WDIR/$WNAME.patch ]]; then
-	wpatch_url="$(print $WNAME.patch | url_encode)"
-	print "<tr><th>Patch of changes:</th><td>"
-	print "<a href=\"$wpatch_url\">$WNAME.patch</a></td></tr>"
-fi
-if [[ -f $WDIR/$WNAME.pdf ]]; then
-	wpdf_url="$(print $WNAME.pdf | url_encode)"
-	print "<tr><th>Printable review:</th><td>"
-	print "<a href=\"$wpdf_url\">$WNAME.pdf</a></td></tr>"
+	print "<p>"
+	print "<b>Commit:</b> $hash <br>"
+	print "<b>Author:</b> $quoted_author<br>"
+	print "<b>Date:</b> $author_date"
+	print "</p>"
+	print "<blockquote><pre>"
+	print "$commit_message"
+	print "</pre>"
+	print "</blockquote>"
 fi
 
-if [[ -n "$iflag" ]]; then
-	print "<tr><th>Author comments:</th><td><div>"
-	cat /tmp/$$.include
-	print "</div></td></tr>"
-fi
-print "</table>"
-print "</div>"
+print "<hr></hr>"
 
 #
 # Second pass through the files: generate the rest of the index file

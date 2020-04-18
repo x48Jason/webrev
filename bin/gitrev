@@ -166,9 +166,9 @@ function generate_top_index_html
 		author_date="$($GIT show -s --format=%ad $hash)"
 	
 		print "<p>"
-		print "commit <a href=\"$sub_dir_url\">$hash</a><br>"
-		print "Author: $quoted_author<br>" 
-		print "Date: $author_date"
+		print "<b>Commit:</b> <a href=\"$sub_dir_url\">$hash</a><br>"
+		print "<b>Author:</b> $quoted_author<br>"
+		print "<b>Date:</b> $author_date"
 		print "</p>"
 		print "<blockquote><pre>"
 		print "$commit_message"
