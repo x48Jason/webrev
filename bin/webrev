@@ -3451,7 +3451,8 @@ fi
 if [[ -n $gflag ]]; then
 	hash=$codemgr_head
 	quoted_title="$(echo "$title" | html_quote)"
-	commit_message="$($GIT show -s --format=%B $hash)"
+	commit_message_subject="$($GIT show -s --format=%s $hash)"
+	commit_message_body="$($GIT show -s --format=%b $hash)"
 	author_name="$($GIT show -s --format=%an $hash)"
 	author_email="$($GIT show -s --format=%ae $hash)"
 	quoted_author="$(echo "$author_name" "<$author_email>" | html_quote)"
@@ -3463,7 +3464,11 @@ if [[ -n $gflag ]]; then
 	print "<b>Date:</b> $author_date"
 	print "</p>"
 	print "<blockquote><pre>"
-	print "$commit_message"
+	print "<b>$commit_message_subject</b>"
+	print "</pre>"
+	print "</blockquote>"
+	print "<blockquote><pre>"
+	print "$commit_message_body"
 	print "</pre>"
 	print "</blockquote>"
 fi
