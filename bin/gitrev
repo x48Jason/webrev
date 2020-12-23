@@ -153,31 +153,25 @@ function generate_top_index_html
 	print "</table>"
 	print "</div>"
 	
+	print "<p>"
+	print "<p>"
+	print "<div>"
+	print "<table><tr><th>Index</th><th>Commit Message</th><th>Date</th></tr>"
+
+	index=1
 	cat $commit_list_file | while read LINE
 	do
 		hash="$(cut -d ' ' -f 1 <<< $LINE)"
-		title="$(cut -d ' ' -f 2- <<< $LINE)"
-		quoted_title="$(echo "$title" | html_quote)"
 		sub_dir_url="$hash/index.html"
-		commit_message="$($GIT show -s --format=%B $hash)"
-		author_name="$($GIT show -s --format=%an $hash)"
-		author_email="$($GIT show -s --format=%ae $hash)"
-		quoted_author="$(echo "$author_name" "<$author_email>" | html_quote)"
+		subject="$($GIT show -s --format=%s $hash)"
 		author_date="$($GIT show -s --format=%ad $hash)"
-	
-		print "<p>"
-		print "<b>Commit:</b> <a href=\"$sub_dir_url\">$hash</a><br>"
-		print "<b>Author:</b> $quoted_author<br>"
-		print "<b>Date:</b> $author_date"
-		print "</p>"
-		print "<blockquote><pre>"
-		print "$commit_message"
-		print "</pre>"
-		print "</blockquote>"
+
+		print "<tr><td style="text-align:center">$index</td><td><a href=\"$sub_dir_url\">$subject</a></td><td>$author_date</td></tr>"
+		let index=index+1
 	done
 	
-	print
-	print
+	print "</table></div>"
+
 	print "<hr></hr>"
 	print "<p style=\"font-size: small\">"
 	print "Webrev is maintained by the <a href=\"http://www.illumos.org\">"
