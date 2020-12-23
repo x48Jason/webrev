@@ -1462,7 +1462,7 @@ diff_to_html()
 	/^\*\*\* old/	{ next }
 	/^\*\*\*\*/	{ next }
 	/^-------/	{ printf "<center><h1>%s</h1></center>\n", $0; next }
-	/^\@\@.*\@\@$/	{ printf "</pre><hr></hr><pre>\n";
+	/^@@.*@@$/	{ printf "</pre><hr></hr><pre>\n";
 			  printf "<span class=\"newmarker\">%s</span>\n", $0;
 			  next}
 
