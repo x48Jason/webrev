@@ -71,6 +71,10 @@ span.chmod {
 }
 a.print { font-size: x-small; }
 a:hover { background-color: #ffcc99; }
+table.center {
+  margin-left: auto;
+  margin-right: auto;
+}
 </style>
 
 <style type="text/css" media="print">
@@ -156,7 +160,7 @@ function generate_top_index_html
 	print "<p>"
 	print "<p>"
 	print "<div>"
-	print "<table><tr><th>Index</th><th>Commit Message</th><th>Date</th></tr>"
+	print "<table class=\"center\"><tr><th>Index</th><th>Commit Message</th><th>Date</th></tr>"
 
 	index=1
 	cat $commit_list_file | while read LINE
